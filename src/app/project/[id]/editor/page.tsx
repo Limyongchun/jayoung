@@ -10,7 +10,7 @@ import {
 import { useProjectStore } from "@/store/projectStore";
 import { SECTION_CONFIGS, type Section } from "@/types";
 import { generatePrompt } from "@/lib/prompts";
-import { cn, fileToDataUrl, generatePlaceholderDataUrl, getSectionColor } from "@/lib/utils";
+import { cn, fileToDataUrl, getSectionColor } from "@/lib/utils";
 
 const STATUS_ICON: Record<Section["status"], React.ReactNode> = {
   idle: null,
@@ -164,10 +164,20 @@ function SectionEditor({ section, projectId, project }: {
   async function handleGenerate() {
     const prompt = buildPrompt();
     updateSection(projectId, section.id, { status: "generating" });
-    await new Promise((r) => setTimeout(r, 1800));
-    const color = getSectionColor(section.type);
-    const placeholderUrl = generatePlaceholderDataUrl(config.title, color, 860, 1000);
-    updateSection(projectId, section.id, { status: "done", generatedImageUrl: placeholderUrl, generatedPrompt: prompt });
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error ?? "생성 실패");
+      updateSection(projectId, section.id, { status: "done", generatedImageUrl: data.url, generatedPrompt: prompt });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "오류가 발생했습니다";
+      alert(`이미지 생성 실패: ${msg}`);
+      updateSection(projectId, section.id, { status: "error" });
+    }
   }
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
