@@ -150,6 +150,7 @@ function SectionEditor({ section, projectId, project }: {
   const config = SECTION_CONFIGS.find((c) => c.type === section.type)!;
   const fileRef = useRef<HTMLInputElement>(null);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   function updateInput(key: string, value: string) {
     updateSection(projectId, section.id, { userInputs: { ...section.userInputs, [key]: value } });
@@ -162,6 +163,7 @@ function SectionEditor({ section, projectId, project }: {
   }
 
   async function handleGenerate() {
+    setErrorMsg(null);
     const prompt = buildPrompt();
     updateSection(projectId, section.id, { status: "generating" });
     try {
@@ -175,7 +177,7 @@ function SectionEditor({ section, projectId, project }: {
       updateSection(projectId, section.id, { status: "done", generatedImageUrl: data.url, generatedPrompt: prompt });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "오류가 발생했습니다";
-      alert(`이미지 생성 실패: ${msg}`);
+      setErrorMsg(msg);
       updateSection(projectId, section.id, { status: "error" });
     }
   }
@@ -253,6 +255,12 @@ function SectionEditor({ section, projectId, project }: {
             </pre>
           )}
         </div>
+
+        {errorMsg && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 leading-relaxed">
+            <span className="font-semibold">오류:</span> {errorMsg}
+          </div>
+        )}
 
         <button onClick={handleGenerate} disabled={isGenerating}
           className={cn("flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all",
