@@ -93,6 +93,18 @@ export const useProjectStore = create<ProjectStore>()(
         return get().projects.find((p) => p.id === id);
       },
     }),
-    { name: "jayoung-projects" }
+    {
+      name: "jayoung-projects",
+      partialize: (state) => ({
+        ...state,
+        projects: state.projects.map((p) => ({
+          ...p,
+          sections: p.sections.map((s) => ({
+            ...s,
+            generatedImageUrl: undefined,
+          })),
+        })),
+      }),
+    }
   )
 );

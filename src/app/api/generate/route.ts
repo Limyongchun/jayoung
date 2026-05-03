@@ -14,21 +14,18 @@ export async function POST(req: NextRequest) {
     const { prompt } = await req.json();
     if (!prompt) return NextResponse.json({ error: "prompt required" }, { status: 400 });
 
-    const trimmedPrompt = prompt.length > 4000 ? prompt.slice(0, 4000) : prompt;
-
     const response = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: trimmedPrompt,
+      model: "gpt-image-1",
+      prompt,
       n: 1,
-      size: "1024x1792",
+      size: "1024x1536",
       quality: "standard",
-      response_format: "url",
     });
 
-    const url = response.data?.[0]?.url;
-    if (!url) return NextResponse.json({ error: "No image URL returned" }, { status: 500 });
+    const b64 = response.data?.[0]?.b64_json;
+    if (!b64) return NextResponse.json({ error: "No image returned" }, { status: 500 });
 
-    return NextResponse.json({ url });
+    return NextResponse.json({ url: `data:image/png;base64,${b64}` });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Image generation failed";
     console.error("[generate]", message);
