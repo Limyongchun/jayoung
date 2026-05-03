@@ -94,7 +94,7 @@ export const useProjectStore = create<ProjectStore>()(
       },
     }),
     {
-      name: "jayoung-projects",
+      name: "jayoung-projects-v2",
       partialize: (state) => ({
         ...state,
         projects: state.projects.map((p) => ({
