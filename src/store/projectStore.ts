@@ -102,6 +102,8 @@ export const useProjectStore = create<ProjectStore>()(
           sections: p.sections.map((s) => ({
             ...s,
             generatedImageUrl: undefined,
+            generatedPrompt: undefined,
+            status: s.status === "generating" ? "idle" : s.status === "done" ? "idle" : s.status,
           })),
         })),
       }),
