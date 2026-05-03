@@ -191,6 +191,9 @@ function SectionEditor({ section, projectId, project }: {
 
   const isGenerating = section.status === "generating";
   const isDone = section.status === "done";
+  const requiredFields = config.fields.filter((f) => f.required);
+  const missingRequired = requiredFields.filter((f) => !section.userInputs[f.key]?.trim());
+  const canGenerate = missingRequired.length === 0 && !isGenerating;
 
   return (
     <div className="p-7 max-w-xl">
@@ -201,7 +204,9 @@ function SectionEditor({ section, projectId, project }: {
       </div>
 
       <div className="space-y-5">
-        {config.fields.map((field) => (
+        {config.fields.map((field) => {
+          const isEmpty = field.required && !section.userInputs[field.key]?.trim();
+          return (
           <div key={field.key}>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">
               {field.label}{field.required && <span className="text-red-400 ml-1">*</span>}
@@ -209,14 +214,17 @@ function SectionEditor({ section, projectId, project }: {
             {field.type === "textarea" ? (
               <textarea value={section.userInputs[field.key] ?? ""} onChange={(e) => updateInput(field.key, e.target.value)}
                 placeholder={field.placeholder} rows={3}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-gray-900 outline-none text-sm resize-none transition-colors" />
+                className={cn("w-full px-4 py-3 rounded-xl border outline-none text-sm resize-none transition-colors",
+                  isEmpty ? "border-red-300 focus:border-red-400" : "border-gray-200 focus:border-gray-900")} />
             ) : (
               <input type="text" value={section.userInputs[field.key] ?? ""} onChange={(e) => updateInput(field.key, e.target.value)}
                 placeholder={field.placeholder}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-gray-900 outline-none text-sm transition-colors" />
+                className={cn("w-full px-4 py-3 rounded-xl border outline-none text-sm transition-colors",
+                  isEmpty ? "border-red-300 focus:border-red-400" : "border-gray-200 focus:border-gray-900")} />
             )}
           </div>
-        ))}
+          );
+        })}
 
         {config.supportsImageUpload && (
           <div>
@@ -256,15 +264,22 @@ function SectionEditor({ section, projectId, project }: {
           )}
         </div>
 
+        {missingRequired.length > 0 && (
+          <p className="text-xs text-red-500">
+            필수 항목을 입력해 주세요: {missingRequired.map((f) => f.label).join(", ")}
+          </p>
+        )}
+
         {errorMsg && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 leading-relaxed">
-            <span className="font-semibold">오류:</span> {errorMsg}
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 leading-relaxed break-all">
+            <span className="font-semibold block mb-1">이미지 생성 오류</span>
+            {errorMsg}
           </div>
         )}
 
-        <button onClick={handleGenerate} disabled={isGenerating}
+        <button onClick={handleGenerate} disabled={!canGenerate}
           className={cn("flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all",
-            isGenerating ? "bg-gray-100 text-gray-400 cursor-not-allowed" :
+            !canGenerate ? "bg-gray-100 text-gray-400 cursor-not-allowed" :
             isDone ? "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200" :
             "bg-gray-900 text-white hover:bg-gray-800")}>
           {isGenerating ? <><Loader2 className="w-4 h-4 animate-spin" /> 생성 중...</> :
