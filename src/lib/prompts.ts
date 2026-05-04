@@ -1,99 +1,142 @@
 import type { Project, Section } from "@/types";
 
-const SECTION_TEMPLATES: Record<string, (inputs: Record<string, string>) => string> = {
-  hero: (i) => `
-[히어로 섹션]
-헤드라인: ${i.headline || ""}
-서브 카피: ${i.subheadline || ""}
-핵심 특징: ${i.productFeature || ""}
-→ 상품을 처음 보는 고객이 1초 만에 가치를 느낄 수 있도록, 강렬하고 감각적인 메인 비주얼을 생성하라.`,
+function master(project: Project) {
+  return `
+You are a professional Korean e-commerce product detail page designer.
+Create a high-quality Korean product detail page image section.
+
+Product: "${project.productName}"
+Brand: "${project.brandName}"
+Category: ${project.category}
+Target customer: ${project.targetCustomer}
+Design style: ${project.masterStyle.designStyle}
+Main color: ${project.masterStyle.mainColor}
+Background: ${project.masterStyle.backgroundStyle}
+Font mood: ${project.masterStyle.fontMood}
+Tone: ${project.masterStyle.tone}
+Image size: 1024×1024px (square)
+Language: All text in the image must be in Korean (한국어). Render Korean characters accurately and legibly.
+`.trim();
+}
+
+const SECTION_TEMPLATES: Record<string, (i: Record<string, string>, project: Project) => string> = {
+  hero: (i, p) => `
+Section type: HERO – Main visual banner
+
+Render this EXACT Korean text in the image:
+- Headline (large, bold): "${i.headline || p.productName}"
+- Subheadline (medium): "${i.subheadline || ""}"
+- Key feature (small): "${i.productFeature || ""}"
+
+Design: Strong, eye-catching hero banner. Product name and headline must be clearly readable in Korean. Place product imagery prominently. The Korean text must be sharp, not blurry or broken.
+`,
 
   problem: (i) => `
-[문제 공감 섹션]
-불편함1: ${i.painPoint1 || ""}
-불편함2: ${i.painPoint2 || ""}
-불편함3: ${i.painPoint3 || ""}
-→ 고객이 "맞아, 나 이 문제 있어!"라고 공감하게 만드는 감정이입 이미지를 생성하라.`,
+Section type: PROBLEM – Customer pain point empathy
+
+Render these EXACT Korean text phrases in the image:
+- Pain point 1: "${i.painPoint1 || ""}"
+- Pain point 2: "${i.painPoint2 || ""}"
+- Pain point 3: "${i.painPoint3 || ""}"
+
+Design: Empathetic, relatable visual showing customer frustration. Use speech bubbles, thought clouds, or expressive imagery. Korean text must be legible and emotionally resonant.
+`,
 
   benefits: (i) => `
-[핵심 혜택 섹션]
-혜택1: ${i.benefit1 || ""}
-혜택2: ${i.benefit2 || ""}
-혜택3: ${i.benefit3 || ""}
-혜택4: ${i.benefit4 || ""}
-→ 아이콘+텍스트+일러스트를 활용해 혜택을 직관적으로 전달하는 이미지를 생성하라.`,
+Section type: BENEFITS – Core product advantages
+
+Render these EXACT Korean benefit texts in the image:
+- Benefit 1: "${i.benefit1 || ""}"
+- Benefit 2: "${i.benefit2 || ""}"
+- Benefit 3: "${i.benefit3 || ""}"
+- Benefit 4: "${i.benefit4 || ""}"
+
+Design: Clean icon + Korean text layout. Each benefit clearly separated. Modern infographic style. Korean labels must be accurate and sharp.
+`,
 
   lifestyle: (i) => `
-[라이프스타일 섹션]
-사용 장면: ${i.scene || ""}
-분위기: ${i.mood || ""}
-고객 감정: ${i.targetFeeling || ""}
-→ 감성적이고 현실적인 사용 장면을 연출해 구매 욕구를 자극하는 이미지를 생성하라.`,
+Section type: LIFESTYLE – Aspirational usage scene
+
+Render these EXACT Korean text elements:
+- Scene description: "${i.scene || ""}"
+- Mood: "${i.mood || ""}"
+- Emotional message: "${i.targetFeeling || ""}"
+
+Design: Warm, lifestyle photography style. Show product in use. Korean text overlaid elegantly. Text must be crisp and readable.
+`,
 
   detail: (i) => `
-[상품 상세 섹션]
-소재/성분: ${i.material || ""}
-규격/용량: ${i.spec || ""}
-원산지/제조: ${i.origin || ""}
-→ 신뢰감을 주는 성분 클로즈업, 텍스처, 인포그래픽 이미지를 생성하라.`,
+Section type: DETAIL – Product specifications
+
+Render these EXACT Korean specification texts:
+- Materials/Ingredients: "${i.material || ""}"
+- Size/Volume: "${i.spec || ""}"
+- Origin/Manufacturing: "${i.origin || ""}"
+
+Design: Clean, trustworthy layout with close-up product shots and infographic-style Korean text labels. All Korean characters must be perfectly legible.
+`,
 
   comparison: (i) => `
-[비교 우위 섹션]
-비교 대상: ${i.competitor || ""}
-차별점1: ${i.diff1 || ""}
-차별점2: ${i.diff2 || ""}
-차별점3: ${i.diff3 || ""}
-→ 명확한 비교표 또는 대비 이미지로 우리 제품의 우수성을 표현하라.`,
+Section type: COMPARISON – Competitive advantage
+
+Render these EXACT Korean comparison texts:
+- Compared to: "${i.competitor || ""}"
+- Advantage 1: "${i.diff1 || ""}"
+- Advantage 2: "${i.diff2 || ""}"
+- Advantage 3: "${i.diff3 || ""}"
+
+Design: Clear comparison table or split visual. Korean text in table cells must be sharp and accurately rendered.
+`,
 
   trust: (i) => `
-[신뢰 요소 섹션]
-인증/수상: ${i.cert || ""}
-언론 노출: ${i.press || ""}
-판매/후기: ${i.sales || ""}
-→ 공신력을 높이는 인증 배지, 언론 로고, 숫자 강조 이미지를 생성하라.`,
+Section type: TRUST – Credibility indicators
+
+Render these EXACT Korean trust elements:
+- Certifications/Awards: "${i.cert || ""}"
+- Media coverage: "${i.press || ""}"
+- Sales/Reviews: "${i.sales || ""}"
+
+Design: Professional, authoritative layout with badges, logos, and numbers. Korean text must be clear and confidence-inspiring.
+`,
 
   components: (i) => `
-[구성품 섹션]
-구성품1: ${i.item1 || ""}
-구성품2: ${i.item2 || ""}
-구성품3: ${i.item3 || ""}
-패키지 특이사항: ${i.packageNote || ""}
-→ 구성품을 깔끔하게 펼쳐 보여주는 플랫레이 스타일 이미지를 생성하라.`,
+Section type: COMPONENTS – Package contents
+
+Render these EXACT Korean item labels:
+- Item 1: "${i.item1 || ""}"
+- Item 2: "${i.item2 || ""}"
+- Item 3: "${i.item3 || ""}"
+- Package note: "${i.packageNote || ""}"
+
+Design: Clean flat-lay style showing all items spread out. Each item labeled in Korean with clear typography.
+`,
 
   howto: (i) => `
-[사용법 섹션]
-Step1: ${i.step1 || ""}
-Step2: ${i.step2 || ""}
-Step3: ${i.step3 || ""}
-팁: ${i.tip || ""}
-→ 번호 순서가 명확한 스텝 가이드 이미지를 생성하라.`,
+Section type: HOW TO USE – Step-by-step guide
+
+Render these EXACT Korean step instructions:
+- Step 1: "${i.step1 || ""}"
+- Step 2: "${i.step2 || ""}"
+- Step 3: "${i.step3 || ""}"
+- Tip: "${i.tip || ""}"
+
+Design: Numbered step guide with icons. Korean step text must be legible next to each numbered icon. Clear sequential flow.
+`,
 
   cta: (i) => `
-[CTA 섹션]
-긴급성: ${i.urgency || ""}
-특별 혜택: ${i.offer || ""}
-최종 카피: ${i.finalCopy || ""}
-→ 지금 당장 구매하고 싶게 만드는 강렬한 마무리 이미지를 생성하라.`,
+Section type: CTA – Call to action
+
+Render these EXACT Korean CTA texts:
+- Urgency/Scarcity: "${i.urgency || ""}"
+- Special offer: "${i.offer || ""}"
+- Final copy (large, bold): "${i.finalCopy || ""}"
+
+Design: High-impact, urgent visual. Final Korean copy must be the most prominent text element, large and bold. Create a sense of urgency.
+`,
 };
 
 export function generatePrompt(project: Project, section: Section): string {
-  const master = `
-=== 마스터 프롬프트 ===
-브랜드명: ${project.brandName}
-상품명: ${project.productName}
-카테고리: ${project.category}
-타깃 고객: ${project.targetCustomer}
-디자인 스타일: ${project.masterStyle.designStyle}
-대표 컬러: ${project.masterStyle.mainColor}
-배경 스타일: ${project.masterStyle.backgroundStyle}
-서체 느낌: ${project.masterStyle.fontMood}
-전체 톤: ${project.masterStyle.tone}
-이미지 크기: 860 × 1000px (세로형 상세페이지)
-언어: 한국어
-`.trim();
-
   const sectionTemplate = SECTION_TEMPLATES[section.type];
-  const sectionPrompt = sectionTemplate ? sectionTemplate(section.userInputs) : "";
-
-  return `${master}\n\n${sectionPrompt.trim()}`;
+  const sectionPrompt = sectionTemplate ? sectionTemplate(section.userInputs, project) : "";
+  return `${master(project)}\n\n${sectionPrompt.trim()}`;
 }
