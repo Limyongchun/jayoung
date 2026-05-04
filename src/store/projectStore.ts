@@ -96,14 +96,16 @@ export const useProjectStore = create<ProjectStore>()(
     {
       name: "jayoung-projects-v2",
       partialize: (state) => ({
-        ...state,
+        currentProjectId: state.currentProjectId,
+        currentSectionIndex: state.currentSectionIndex,
         projects: state.projects.map((p) => ({
           ...p,
           sections: p.sections.map((s) => ({
-            ...s,
-            generatedImageUrl: undefined,
-            generatedPrompt: undefined,
-            status: s.status === "generating" ? "idle" : s.status === "done" ? "idle" : s.status,
+            id: s.id,
+            type: s.type,
+            status: "idle" as const,
+            userInputs: s.userInputs,
+            uploadedImages: s.uploadedImages,
           })),
         })),
       }),
