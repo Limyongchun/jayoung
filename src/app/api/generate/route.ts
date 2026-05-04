@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     if (!prompt) return NextResponse.json({ error: "prompt required" }, { status: 400 });
 
     const response = await openai.images.generate({
-      model: "gpt-image-1.5",
+      model: "chatgpt-image-latest",
       prompt,
       n: 1,
       size: "1024x1024",
