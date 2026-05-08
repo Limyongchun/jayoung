@@ -170,7 +170,10 @@ function SectionEditor({ section, projectId, project }: {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({
+          prompt,
+          images: section.uploadedImages.length > 0 ? section.uploadedImages : undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok || !data.url) throw new Error(data.error ?? "생성 실패");

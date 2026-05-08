@@ -77,6 +77,7 @@ export const SECTION_CONFIGS: SectionConfig[] = [
     num: "02",
     title: "문제 공감",
     description: "고객의 불편함과 고민을 공감하며 필요성을 환기합니다.",
+    supportsImageUpload: true,
     fields: [
       { key: "painPoint1", label: "불편함 1", type: "text", placeholder: "예: 매일 아침 뻑뻑한 피부 때문에 고민이신가요?", required: true },
       { key: "painPoint2", label: "불편함 2", type: "text", placeholder: "예: 비싼 제품 써도 효과가 없어서 지쳤나요?" },
@@ -88,6 +89,7 @@ export const SECTION_CONFIGS: SectionConfig[] = [
     num: "03",
     title: "핵심 혜택",
     description: "이 상품이 제공하는 3~4가지 핵심 가치를 보여줍니다.",
+    supportsImageUpload: true,
     fields: [
       { key: "benefit1", label: "혜택 1", type: "text", placeholder: "예: 72시간 지속 보습", required: true },
       { key: "benefit2", label: "혜택 2", type: "text", placeholder: "예: 피부과 테스트 완료" },
@@ -124,6 +126,7 @@ export const SECTION_CONFIGS: SectionConfig[] = [
     num: "06",
     title: "비교 우위",
     description: "경쟁 제품과의 차별점을 한눈에 보여줍니다.",
+    supportsImageUpload: true,
     fields: [
       { key: "competitor", label: "비교 대상", type: "text", placeholder: "예: 기존 크림 제품들", required: true },
       { key: "diff1", label: "차별점 1", type: "text", placeholder: "예: 우리 제품 - 흡수 속도 3배 빠름", required: true },
@@ -161,6 +164,7 @@ export const SECTION_CONFIGS: SectionConfig[] = [
     num: "09",
     title: "사용법",
     description: "단계별 사용 방법을 쉽고 직관적으로 안내합니다.",
+    supportsImageUpload: true,
     fields: [
       { key: "step1", label: "Step 1", type: "text", placeholder: "예: 세안 후 토너로 피부결 정돈", required: true },
       { key: "step2", label: "Step 2", type: "text", placeholder: "예: 소량을 덜어 얼굴 전체에 도포" },
@@ -173,6 +177,7 @@ export const SECTION_CONFIGS: SectionConfig[] = [
     num: "10",
     title: "구매 유도 (CTA)",
     description: "구매를 결심하게 만드는 마지막 설득 메시지입니다.",
+    supportsImageUpload: true,
     fields: [
       { key: "urgency", label: "긴급성/희소성", type: "text", placeholder: "예: 이번 달 한정 200세트, 소진 시 종료" },
       { key: "offer", label: "특별 혜택", type: "text", placeholder: "예: 지금 구매 시 증정품 + 무료배송" },
