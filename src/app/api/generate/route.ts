@@ -1,16 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { toFile } from "openai";
 
 export const maxDuration = 120;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-function dataUrlToFile(dataUrl: string, filename: string): Promise<File> {
-  const [header, base64] = dataUrl.split(",");
-  const mime = header.match(/:(.*?);/)?.[1] ?? "image/png";
-  const buffer = Buffer.from(base64, "base64");
-  return toFile(buffer, filename, { type: mime });
+async function analyzeReferenceImages(images: string[]): Promise<string> {
+  const content: OpenAI.Chat.ChatCompletionContentPart[] = [
+    {
+      type: "text",
+      text: `You are a professional product analyst. Analyze these reference images and extract precise details for use in image generation.
+
+Extract and describe in English:
+1. PRODUCT: exact shape, size, form factor, packaging type
+2. COLORS: primary colors, accent colors, gradients, metallic/matte finishes
+3. TEXTURES: surface materials, finish quality, tactile impressions
+4. BRANDING: logo placement, label design, typography on packaging
+5. STYLE SIGNALS: overall aesthetic (luxury/casual/clinical/natural etc.)
+6. KEY VISUAL ELEMENTS: unique design details that must be preserved
+
+Be specific and concrete. This description will be used to generate a matching product image.`,
+    },
+    ...images.slice(0, 4).map(
+      (url): OpenAI.Chat.ChatCompletionContentPart => ({
+        type: "image_url",
+        image_url: { url, detail: "high" },
+      })
+    ),
+  ];
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [{ role: "user", content }],
+    max_tokens: 600,
+  });
+
+  return response.choices[0]?.message?.content ?? "";
 }
 
 export async function POST(req: NextRequest) {
@@ -22,36 +47,27 @@ export async function POST(req: NextRequest) {
     const { prompt, images } = await req.json();
     if (!prompt) return NextResponse.json({ error: "prompt required" }, { status: 400 });
 
-    let b64: string | undefined;
+    let finalPrompt = prompt;
 
     if (images && Array.isArray(images) && images.length > 0) {
-      const imageFiles = await Promise.all(
-        images.slice(0, 4).map((dataUrl: string, i: number) =>
-          dataUrlToFile(dataUrl, `reference-${i}.png`)
-        )
-      );
+      const analysis = await analyzeReferenceImages(images);
+      finalPrompt = `${prompt}
 
-      const response = await openai.images.edit({
-        model: "gpt-image-1",
-        image: imageFiles[0],
-        ...(imageFiles.length > 1 ? { mask: undefined } : {}),
-        prompt,
-        n: 1,
-        size: "1024x1024",
-        quality: "high",
-      });
-      b64 = response.data?.[0]?.b64_json;
-    } else {
-      const response = await openai.images.generate({
-        model: "gpt-image-1",
-        prompt,
-        n: 1,
-        size: "1024x1024",
-        quality: "high",
-      });
-      b64 = response.data?.[0]?.b64_json;
+━━ REFERENCE PRODUCT ANALYSIS (from uploaded images) ━━
+${analysis}
+
+CRITICAL: The product shown in the generated image must visually match the reference analysis above. Preserve the exact product colors, packaging shape, and brand identity described.`;
     }
 
+    const response = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt: finalPrompt,
+      n: 1,
+      size: "1024x1024",
+      quality: "high",
+    });
+
+    const b64 = response.data?.[0]?.b64_json;
     if (!b64) return NextResponse.json({ error: "No image returned" }, { status: 500 });
     return NextResponse.json({ url: `data:image/png;base64,${b64}` });
   } catch (err: unknown) {
