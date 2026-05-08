@@ -57,6 +57,8 @@ export interface Project {
   masterStyle: MasterStyle;
   sections: Section[];
   createdAt: number;
+  referenceImages: string[];
+  referenceAnalysis?: string;
 }
 
 export const SECTION_CONFIGS: SectionConfig[] = [

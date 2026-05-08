@@ -1,11 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, ArrowRight, RotateCcw, Eye, ChevronUp, ChevronDown,
   Sparkles, ImagePlus, X, FileImage, Loader2, CheckCircle2, Settings,
+  ScanSearch, ShieldCheck,
 } from "lucide-react";
 import { useProjectStore } from "@/store/projectStore";
 import { SECTION_CONFIGS, type Section } from "@/types";
@@ -21,7 +22,6 @@ const STATUS_ICON: Record<Section["status"], React.ReactNode> = {
 
 export default function EditorPage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
   const { getProject, setCurrentSectionIndex, reorderSections, currentSectionIndex } = useProjectStore();
   const project = getProject(params.id);
 
@@ -70,9 +70,10 @@ export default function EditorPage() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left: Section list */}
+        {/* Left: Reference + Section list */}
         <aside className="w-52 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
-          <div className="px-4 py-3 border-b border-gray-100">
+          <ReferenceImagePanel projectId={project.id} referenceImages={project.referenceImages ?? []} referenceAnalysis={project.referenceAnalysis} />
+          <div className="px-4 py-2 border-b border-gray-100">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">섹션</p>
           </div>
           <div className="flex-1 overflow-y-auto py-1.5">
@@ -141,6 +142,94 @@ export default function EditorPage() {
   );
 }
 
+function ReferenceImagePanel({ projectId, referenceImages, referenceAnalysis }: {
+  projectId: string;
+  referenceImages: string[];
+  referenceAnalysis?: string;
+}) {
+  const { updateProjectReferences } = useProjectStore();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    const newImages = await Promise.all(files.map(fileToDataUrl));
+    const allImages = [...referenceImages, ...newImages].slice(0, 4);
+    await runAnalysis(allImages);
+    e.target.value = "";
+  }
+
+  async function runAnalysis(images: string[]) {
+    setAnalyzing(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "분석 실패");
+      updateProjectReferences(projectId, images, data.analysis);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "오류 발생");
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
+  function removeImage(idx: number) {
+    const updated = referenceImages.filter((_, i) => i !== idx);
+    if (updated.length > 0) {
+      runAnalysis(updated);
+    } else {
+      updateProjectReferences(projectId, [], "");
+    }
+  }
+
+  return (
+    <div className="border-b border-gray-100 p-3">
+      <div className="flex items-center gap-1.5 mb-2">
+        <ScanSearch className="w-3.5 h-3.5 text-gray-500" />
+        <p className="text-xs font-semibold text-gray-600">제품 사진 등록</p>
+        {referenceAnalysis && <ShieldCheck className="w-3 h-3 text-emerald-500 ml-auto" />}
+      </div>
+      <p className="text-[10px] text-gray-400 mb-2 leading-relaxed">
+        제품 사진을 등록하면 모든 섹션에서 동일한 제품이 일관되게 생성됩니다.
+      </p>
+
+      {referenceImages.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {referenceImages.map((url, i) => (
+            <div key={i} className="relative w-14 h-14 group">
+              <img src={url} alt="" className="w-full h-full object-cover rounded-lg border border-gray-200" />
+              <button onClick={() => removeImage(i)}
+                className="absolute -top-1 -right-1 w-4 h-4 bg-gray-900 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleFileChange} className="hidden" />
+      <button onClick={() => fileRef.current?.click()} disabled={analyzing || referenceImages.length >= 4}
+        className="flex items-center gap-1.5 w-full justify-center px-3 py-2 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:border-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        {analyzing ? <><Loader2 className="w-3 h-3 animate-spin" /> AI 분석 중...</> : <><ImagePlus className="w-3 h-3" /> 사진 추가 (최대 4장)</>}
+      </button>
+
+      {referenceAnalysis && !analyzing && (
+        <p className="text-[10px] text-emerald-600 mt-1.5 flex items-center gap-1">
+          <CheckCircle2 className="w-3 h-3" /> 제품 분석 완료 — 전 섹션 적용 중
+        </p>
+      )}
+      {error && <p className="text-[10px] text-red-500 mt-1.5">{error}</p>}
+    </div>
+  );
+}
+
 function SectionEditor({ section, projectId, project }: {
   section: Section;
   projectId: string;
@@ -172,7 +261,7 @@ function SectionEditor({ section, projectId, project }: {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
-          images: section.uploadedImages.length > 0 ? section.uploadedImages : undefined,
+          referenceAnalysis: project.referenceAnalysis || undefined,
         }),
       });
       const data = await res.json();
@@ -210,29 +299,29 @@ function SectionEditor({ section, projectId, project }: {
         {config.fields.map((field) => {
           const isEmpty = field.required && !section.userInputs[field.key]?.trim();
           return (
-          <div key={field.key}>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-              {field.label}{field.required && <span className="text-red-400 ml-1">*</span>}
-            </label>
-            {field.type === "textarea" ? (
-              <textarea value={section.userInputs[field.key] ?? ""} onChange={(e) => updateInput(field.key, e.target.value)}
-                placeholder={field.placeholder} rows={3}
-                className={cn("w-full px-4 py-3 rounded-xl border outline-none text-sm resize-none transition-colors",
-                  isEmpty ? "border-red-300 focus:border-red-400" : "border-gray-200 focus:border-gray-900")} />
-            ) : (
-              <input type="text" value={section.userInputs[field.key] ?? ""} onChange={(e) => updateInput(field.key, e.target.value)}
-                placeholder={field.placeholder}
-                className={cn("w-full px-4 py-3 rounded-xl border outline-none text-sm transition-colors",
-                  isEmpty ? "border-red-300 focus:border-red-400" : "border-gray-200 focus:border-gray-900")} />
-            )}
-          </div>
+            <div key={field.key}>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                {field.label}{field.required && <span className="text-red-400 ml-1">*</span>}
+              </label>
+              {field.type === "textarea" ? (
+                <textarea value={section.userInputs[field.key] ?? ""} onChange={(e) => updateInput(field.key, e.target.value)}
+                  placeholder={field.placeholder} rows={3}
+                  className={cn("w-full px-4 py-3 rounded-xl border outline-none text-sm resize-none transition-colors",
+                    isEmpty ? "border-red-300 focus:border-red-400" : "border-gray-200 focus:border-gray-900")} />
+              ) : (
+                <input type="text" value={section.userInputs[field.key] ?? ""} onChange={(e) => updateInput(field.key, e.target.value)}
+                  placeholder={field.placeholder}
+                  className={cn("w-full px-4 py-3 rounded-xl border outline-none text-sm transition-colors",
+                    isEmpty ? "border-red-300 focus:border-red-400" : "border-gray-200 focus:border-gray-900")} />
+              )}
+            </div>
           );
         })}
 
         {config.supportsImageUpload && (
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-              참고 이미지 <span className="text-gray-400 font-normal">(선택)</span>
+              섹션 참고 이미지 <span className="text-gray-400 font-normal">(선택 · 이 섹션에만 적용)</span>
             </label>
             <input ref={fileRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
             {section.uploadedImages.length > 0 && (

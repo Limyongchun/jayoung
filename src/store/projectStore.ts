@@ -8,9 +8,10 @@ interface ProjectStore {
   projects: Project[];
   currentProjectId: string | null;
   currentSectionIndex: number;
-  createProject: (data: Omit<Project, "masterStyle" | "sections" | "createdAt">) => string;
+  createProject: (data: Omit<Project, "masterStyle" | "sections" | "createdAt" | "referenceImages" | "referenceAnalysis">) => string;
   updateMasterStyle: (id: string, style: MasterStyle) => void;
   updateSection: (projectId: string, sectionId: string, data: Partial<Section>) => void;
+  updateProjectReferences: (projectId: string, images: string[], analysis: string) => void;
   reorderSections: (projectId: string, from: number, to: number) => void;
   deleteProject: (id: string) => void;
   setCurrentProject: (id: string) => void;
@@ -43,6 +44,8 @@ export const useProjectStore = create<ProjectStore>()(
             tone: "trust",
           },
           sections,
+          referenceImages: [],
+          referenceAnalysis: undefined,
           createdAt: Date.now(),
         };
         set((s) => ({ projects: [project, ...s.projects], currentProjectId: project.id, currentSectionIndex: 0 }));
@@ -61,6 +64,14 @@ export const useProjectStore = create<ProjectStore>()(
             p.id === projectId
               ? { ...p, sections: p.sections.map((sec) => (sec.id === sectionId ? { ...sec, ...data } : sec)) }
               : p
+          ),
+        }));
+      },
+
+      updateProjectReferences(projectId, images, analysis) {
+        set((s) => ({
+          projects: s.projects.map((p) =>
+            p.id === projectId ? { ...p, referenceImages: images, referenceAnalysis: analysis } : p
           ),
         }));
       },
@@ -100,12 +111,14 @@ export const useProjectStore = create<ProjectStore>()(
         currentSectionIndex: state.currentSectionIndex,
         projects: state.projects.map((p) => ({
           ...p,
+          referenceImages: [],
+          referenceAnalysis: p.referenceAnalysis,
           sections: p.sections.map((s) => ({
             id: s.id,
             type: s.type,
             status: "idle" as const,
             userInputs: s.userInputs,
-            uploadedImages: s.uploadedImages,
+            uploadedImages: [],
           })),
         })),
       }),
